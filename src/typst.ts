@@ -23,7 +23,7 @@ function renderSections(
   sections: GostDocument["sections"]
 ): string {
   if (sections.length === 0) {
-    return `#let ${name} = ()`; // ✅ пустой массив
+    return `#let ${name} = ()`;
   }
   const items = sections
     .map(
@@ -35,10 +35,13 @@ function renderSections(
   )`
     )
     .join(",\n");
-  return `#let ${name} = (${items},)`; // ✅ trailing comma — гарантирует массив при 1 элементе
+  return `#let ${name} = (${items},)`;
 }
 
-function renderBibliography(doc: GostDocument): string {
+function renderRefs(doc: GostDocument): string {
+  if (doc.bibliography.length === 0) {
+    return `#let refs = ()`;
+  }
   const items = doc.bibliography
     .map(
       (b) => `(
@@ -48,7 +51,7 @@ function renderBibliography(doc: GostDocument): string {
   )`
     )
     .join(",\n");
-  return `#let refs = (${items})`;
+  return `#let refs = (${items},)`;
 }
 
 export async function renderTypst(
@@ -58,25 +61,25 @@ export async function renderTypst(
   const template = await readFile(templatePath, "utf8");
   const sections = renderSections("sections", document.sections);
   const appendices = renderSections("appendices", document.appendices);
-  const bibliography = renderBibliography(document);
+  const refs = renderRefs(document);
 
   return template
     .replaceAll("__TITLE__", esc(document.titlePage.title))
-    .replace("__UNIVERSITY__", esc(document.titlePage.university))
-    .replace("__FACULTY__", esc(document.titlePage.faculty ?? ""))
-    .replace("__DEPARTMENT__", esc(document.titlePage.department ?? ""))
-    .replace("__SUBTITLE__", esc(document.titlePage.subtitle ?? ""))
-    .replace("__AUTHOR__", esc(document.titlePage.author))
-    .replace("__GROUP__", esc(document.titlePage.group ?? ""))
-    .replace("__SUPERVISOR__", esc(document.titlePage.supervisor))
-    .replace("__CITY__", esc(document.titlePage.city))
-    .replace("__YEAR__", String(document.titlePage.year))
-    .replace("__ABSTRACT__", esc(document.abstract ?? ""))
-    .replace("__INTRODUCTION__", esc(document.introduction ?? ""))
-    .replace("__CONCLUSION__", esc(document.conclusion ?? ""))
-    .replace("__SECTIONS__", sections)
-    .replace("__APPENDICES__", appendices)
-    .replace("__BIBLIOGRAPHY__", bibliography);
+    .replaceAll("__UNIVERSITY__", esc(document.titlePage.university))
+    .replaceAll("__FACULTY__", esc(document.titlePage.faculty ?? ""))
+    .replaceAll("__DEPARTMENT__", esc(document.titlePage.department ?? ""))
+    .replaceAll("__SUBTITLE__", esc(document.titlePage.subtitle ?? ""))
+    .replaceAll("__AUTHOR__", esc(document.titlePage.author))
+    .replaceAll("__GROUP__", esc(document.titlePage.group ?? ""))
+    .replaceAll("__SUPERVISOR__", esc(document.titlePage.supervisor))
+    .replaceAll("__CITY__", esc(document.titlePage.city))
+    .replaceAll("__YEAR__", String(document.titlePage.year))
+    .replaceAll("__ABSTRACT__", esc(document.abstract ?? ""))
+    .replaceAll("__INTRODUCTION__", esc(document.introduction ?? ""))
+    .replaceAll("__CONCLUSION__", esc(document.conclusion ?? ""))
+    .replaceAll("__SECTIONS__", sections)
+    .replaceAll("__APPENDICES__", appendices)
+    .replaceAll("__REFS__", refs);
 }
 
 export async function writeProjectFiles(
