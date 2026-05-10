@@ -15,7 +15,7 @@
 #let doc-conclusion  = "__CONCLUSION__"
 __SECTIONS__
 __APPENDICES__
-__BIBLIOGRAPHY__
+__REFS__
 
 #show: gost.with(
   ministry: doc-university,
@@ -64,9 +64,9 @@ __BIBLIOGRAPHY__
 = Заключение
 #par(justify: true)[#doc-conclusion]
 
-#if bibliography.len() > 0 [
+#if refs.len() > 0 [
   = Список использованных источников
-  #for item in bibliography [
+  #for item in refs [
     + #item.raw
   ]
 ]
