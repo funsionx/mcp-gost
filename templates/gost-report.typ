@@ -1,7 +1,5 @@
 #import "@preview/modern-g7-32:0.1.0": project
 
-#let doc = json("data.json")
-
 #let title = "__TITLE__"
 #let university = "__UNIVERSITY__"
 #let faculty = "__FACULTY__"
@@ -53,7 +51,7 @@ __BIBLIOGRAPHY__
 #par(justify: true)[#conclusion]
 
 = Список использованных источников
-#for item in bibliography [
+#for item in refs [
   + #item.raw
 ]
 

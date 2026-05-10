@@ -32,7 +32,7 @@ function renderSections(
   )`
     )
     .join(",\n");
-  return `#let ${name} = (${items})`;
+  return `#let ${name} = (${items},)`;
 }
 
 function renderBibliography(doc: GostDocument): string {
@@ -45,7 +45,7 @@ function renderBibliography(doc: GostDocument): string {
   )`
     )
     .join(",\n");
-  return `#let bibliography = (${items})`;
+  return `#let refs = (${items})`;
 }
 
 export async function renderTypst(
@@ -58,8 +58,7 @@ export async function renderTypst(
   const bibliography = renderBibliography(document);
 
   return template
-    .replace("__DOCUMENT_JSON__", JSON.stringify(document, null, 2))
-    .replace("__TITLE__", esc(document.titlePage.title))
+    .replaceAll("__TITLE__", esc(document.titlePage.title))
     .replace("__UNIVERSITY__", esc(document.titlePage.university))
     .replace("__FACULTY__", esc(document.titlePage.faculty ?? ""))
     .replace("__DEPARTMENT__", esc(document.titlePage.department ?? ""))
