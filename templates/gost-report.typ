@@ -1,64 +1,80 @@
-#import "@preview/modern-g7-32:0.2.0": gost, abstract, appendixes
+#import "@preview/modern-g7-32:0.2.0": gost, abstract as gost-abstract, appendixes
 
-#let title = "__TITLE__"
-#let university = "__UNIVERSITY__"
-#let faculty = "__FACULTY__"
-#let department = "__DEPARTMENT__"
-#let subtitle = "__SUBTITLE__"
-#let author = "__AUTHOR__"
-#let group = "__GROUP__"
-#let supervisor = "__SUPERVISOR__"
-#let city = "__CITY__"
-#let year = __YEAR__
-#let abstract = "__ABSTRACT__"
-#let introduction = "__INTRODUCTION__"
-#let conclusion = "__CONCLUSION__"
+#let doc-title       = "__TITLE__"
+#let doc-subtitle    = "__SUBTITLE__"
+#let doc-university  = "__UNIVERSITY__"
+#let doc-faculty     = "__FACULTY__"
+#let doc-department  = "__DEPARTMENT__"
+#let doc-author      = "__AUTHOR__"
+#let doc-group       = "__GROUP__"
+#let doc-supervisor  = "__SUPERVISOR__"
+#let doc-city        = "__CITY__"
+#let doc-year        = __YEAR__
+#let doc-abstract    = "__ABSTRACT__"
+#let doc-intro       = "__INTRODUCTION__"
+#let doc-conclusion  = "__CONCLUSION__"
 __SECTIONS__
 __APPENDICES__
 __BIBLIOGRAPHY__
 
 #show: gost.with(
-  title: title,
-  university: university,
-  faculty: faculty,
-  department: department,
-  author: author,
-  group: group,
-  supervisor: supervisor,
-  city: city,
-  year: year,
+  ministry: doc-university,
+  organization: (
+    full: doc-faculty,
+    short: doc-department,
+  ),
+  about: doc-subtitle,
+  research: doc-title,
+  subject: doc-title,
+  manager: (
+    name: doc-supervisor,
+    position: "Научный руководитель",
+    title: "Руководитель работы,",
+  ),
+  performers: (
+    (
+      name: doc-author,
+      position: if doc-group != "" { "Студент группы " + doc-group } else { "Студент" },
+    ),
+  ),
+  city: doc-city,
+  federal: "",
 )
 
-= Аннотация
-#par(justify: true)[#abstract]
+#gost-abstract("ГОСТ", "Typst", "отчёт")[
+  #doc-abstract
+]
+
+#outline()
 
 = Введение
-#par(justify: true)[#introduction]
+#par(justify: true)[#doc-intro]
 
 #for section in sections [
-  #let heading = if section.level == 1 {
-    heading(level: 1, section.title)
-  } else if section.level == 2 {
-    heading(level: 2, section.title)
-  } else {
-    heading(level: 3, section.title)
-  }
-  #heading
+  #if section.level == 1 [
+    = #section.title
+  ] else if section.level == 2 [
+    == #section.title
+  ] else [
+    === #section.title
+  ]
   #par(justify: true)[#section.content]
 ]
 
 = Заключение
-#par(justify: true)[#conclusion]
+#par(justify: true)[#doc-conclusion]
 
-= Список использованных источников
-#for item in refs [
-  + #item.raw
+#if bibliography.len() > 0 [
+  = Список использованных источников
+  #for item in bibliography [
+    + #item.raw
+  ]
 ]
 
 #if appendices.len() > 0 [
-  = Приложения
+  #show: appendixes
   #for app in appendices [
-    == #app.title
+    = #app.title
     #par(justify: true)[#app.content]
   ]
 ]
