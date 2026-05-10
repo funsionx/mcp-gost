@@ -23,9 +23,8 @@ __REFS__
     full: doc-faculty,
     short: doc-department,
   ),
-  about: "О научно-исследовательской работе",
+  about: doc-subtitle,
   research: doc-title,
-  subject: doc-subtitle,
   manager: (
     name: doc-supervisor,
     position: "Научный руководитель",
