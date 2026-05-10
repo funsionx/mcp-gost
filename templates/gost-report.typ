@@ -1,8 +1,6 @@
 #import "@preview/modern-g7-32:0.1.0": project
 
-#let doc = json("""
-__DOCUMENT_JSON__
-""")
+#let doc = json("data.json")
 
 #let title = "__TITLE__"
 #let university = "__UNIVERSITY__"
