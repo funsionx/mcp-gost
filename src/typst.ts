@@ -22,6 +22,9 @@ function renderSections(
   name: string,
   sections: GostDocument["sections"]
 ): string {
+  if (sections.length === 0) {
+    return `#let ${name} = ()`; // ✅ пустой массив
+  }
   const items = sections
     .map(
       (s) => `(
@@ -32,7 +35,7 @@ function renderSections(
   )`
     )
     .join(",\n");
-  return `#let ${name} = (${items},)`;
+  return `#let ${name} = (${items},)`; // ✅ trailing comma — гарантирует массив при 1 элементе
 }
 
 function renderBibliography(doc: GostDocument): string {

@@ -1,4 +1,4 @@
-#import "@preview/modern-g7-32:0.1.0": project
+#import "@preview/modern-g7-32:0.2.0": gost, abstract, appendixes
 
 #let title = "__TITLE__"
 #let university = "__UNIVERSITY__"
@@ -17,7 +17,7 @@ __SECTIONS__
 __APPENDICES__
 __BIBLIOGRAPHY__
 
-#show: project.with(
+#show: gost.with(
   title: title,
   university: university,
   faculty: faculty,
