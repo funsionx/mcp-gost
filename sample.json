@@ -1,0 +1,47 @@
+{
+  "documentType": "report",
+  "standard": "GOST_7_32_2017",
+  "language": "ru",
+  "titlePage": {
+    "university": "Московский технический университет",
+    "faculty": "Факультет информатики",
+    "department": "Кафедра программной инженерии",
+    "title": "Разработка MCP-сервера для генерации документов по ГОСТ",
+    "subtitle": "Отчет по учебной практике",
+    "author": "Иванов И.И.",
+    "group": "ИУ8-41",
+    "supervisor": "Петров П.П.",
+    "city": "Москва",
+    "year": 2026
+  },
+  "abstract": "В работе рассматривается подход к созданию MCP-сервера, который генерирует академические документы в формате Typst на основе шаблона ГОСТ.",
+  "introduction": "Современные AI-агенты могут готовить черновики научных работ, однако без формального шаблона они плохо соблюдают требования к оформлению.",
+  "sections": [
+    {
+      "id": "analysis",
+      "title": "Анализ предметной области",
+      "content": "Исследованы протокол MCP, возможности Typst и специфика автоматизации подготовки учебных отчетов.",
+      "level": 1
+    },
+    {
+      "id": "implementation",
+      "title": "Проектирование и реализация сервера",
+      "content": "Определены инструменты new_project, render_typst, compile_pdf и export_package, а также схема JSON-модели документа.",
+      "level": 1
+    }
+  ],
+  "conclusion": "Разработанный подход позволяет отделить генерацию содержания от строгой типографики и требований к структуре документа.",
+  "bibliography": [
+    {
+      "id": "mcp-spec",
+      "kind": "website",
+      "raw": "Model Context Protocol. Specification. URL: https://modelcontextprotocol.io/"
+    },
+    {
+      "id": "typst",
+      "kind": "website",
+      "raw": "Typst. Documentation. URL: https://typst.app/docs/"
+    }
+  ],
+  "appendices": []
+}
