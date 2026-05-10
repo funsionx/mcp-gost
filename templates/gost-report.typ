@@ -23,9 +23,8 @@ __REFS__
     full: doc-faculty,
     short: doc-department,
   ),
-  about: doc-subtitle,
-  research: doc-title,
-  subject: doc-title,
+  about: doc-title,
+  research: doc-subtitle,
   manager: (
     name: doc-supervisor,
     position: "Научный руководитель",
@@ -41,7 +40,7 @@ __REFS__
   federal: "",
 )
 
-#gost-abstract("ГОСТ", "Typst", "отчёт")[
+#gost-abstract(doc-subtitle, doc-title, "отчёт")[
   #doc-abstract
 ]
 

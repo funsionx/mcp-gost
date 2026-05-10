@@ -6,8 +6,6 @@ export type Diagnostic = {
   message: string;
 };
 
-const requiredSectionKeywords = ["введение", "заключение"];
-
 export function lintDocument(doc: GostDocument): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
 
@@ -19,27 +17,37 @@ export function lintDocument(doc: GostDocument): Diagnostic[] {
     });
   }
 
-  if (doc.sections.length < 2) {
+  if (!doc.titlePage.title.trim()) {
     diagnostics.push({
-      level: "warning",
-      field: "sections",
-      message:
-        "Для учебной работы обычно нужно больше одного основного раздела.",
+      level: "error",
+      field: "titlePage.title",
+      message: "Не указана тема работы.",
     });
   }
 
-  const titles = doc.sections.map((s) => s.title.toLowerCase());
-  for (const keyword of requiredSectionKeywords) {
-    const hasKeyword = titles.some((t) => t.includes(keyword));
-    if (!hasKeyword && keyword !== "заключение") {
-      diagnostics.push({
-        level: "warning",
-        field: "sections",
-        message: `Среди разделов не найден блок, похожий на «${keyword}».`,
-      });
-    }
+  if (!doc.titlePage.author.trim()) {
+    diagnostics.push({
+      level: "error",
+      field: "titlePage.author",
+      message: "Не указан автор.",
+    });
   }
 
+  if (doc.sections.length === 0) {
+    diagnostics.push({
+      level: "error",
+      field: "sections",
+      message: "Отсутствуют основные разделы.",
+    });
+  } else if (doc.sections.length < 2) {
+    diagnostics.push({
+      level: "warning",
+      field: "sections",
+      message: "Для учебной работы обычно нужно больше одного основного раздела.",
+    });
+  }
+
+  // Введение и заключение хардкодятся в шаблоне, валидируем поля introduction/conclusion
   if (!doc.introduction?.trim()) {
     diagnostics.push({
       level: "warning",
@@ -64,7 +72,7 @@ export function lintDocument(doc: GostDocument): Diagnostic[] {
     });
   }
 
-  if (doc.titlePage.year < 2020) {
+  if (doc.titlePage.year < 2000 || doc.titlePage.year > 2100) {
     diagnostics.push({
       level: "info",
       field: "titlePage.year",
