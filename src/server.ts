@@ -1,23 +1,36 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { mkdir, readdir, readFile } from "node:fs/promises";
-import {
-  McpServer,
-  ResourceTemplate,
-} from "@modelcontextprotocol/sdk/server/mcp.js";
+import { spawn } from "node:child_process";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { z } from "zod";
-import { documentSchema } from "./schemas.js";
-import { compileTypst, renderTypst, writeProjectFiles } from "./typst.js";
-import { lintDocument } from "./validators.js";
+import { getOpenRouterConfig, getS3Config, loadEnv } from "./config/env.js";
+import { GostAgentService } from "./agent/gost-agent.service.js";
+import { handleDocumentApi } from "./http/document-api.js";
+import { registerMcpCapabilities } from "./mcp/register-tools.js";
+import { DocumentGenerationService } from "./services/document-generation.service.js";
+import { ProjectService } from "./services/project.service.js";
+import { S3Service } from "./services/s3.service.js";
+import { TypstService } from "./services/typst.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "..");
-const workspaceDir = path.join(rootDir, "workspace");
+const env = loadEnv();
+const s3Service = new S3Service(getS3Config(env));
 const templatePath = path.join(rootDir, "templates", "gost-report.typ");
+const projectService = new ProjectService(s3Service);
+const typstService = new TypstService(templatePath);
 
-await mkdir(workspaceDir, { recursive: true });
+function createDocumentGenerationService(): DocumentGenerationService {
+  const agentService = env.OPENROUTER_API_KEY
+    ? new GostAgentService(getOpenRouterConfig(env))
+    : null;
+  return new DocumentGenerationService(
+    agentService,
+    projectService,
+    typstService
+  );
+}
 
 function createMcpServer(): McpServer {
   const server = new McpServer(
@@ -31,234 +44,73 @@ function createMcpServer(): McpServer {
     }
   );
 
-  server.registerTool(
-    "new_project",
-    {
-      title: "Create GOST Project",
-      description:
-        "Create a new academic project manifest for a GOST-compatible Typst document.",
-      inputSchema: {
-        projectId: z.string().regex(/^[a-z0-9\-]+$/),
-        document: documentSchema,
-      },
-      outputSchema: {
-        projectId: z.string(),
-        projectDir: z.string(),
-        diagnostics: z.array(
-          z.object({
-            level: z.string(),
-            field: z.string(),
-            message: z.string(),
-          })
-        ),
-      },
-    },
-    async ({ projectId, document }) => {
-      const parsed = documentSchema.parse(document);
-      const diagnostics = lintDocument(parsed);
-      const typContent = await renderTypst(templatePath, parsed);
-      const { projectDir } = await writeProjectFiles(
-        workspaceDir,
-        projectId,
-        typContent,
-        parsed
-      );
-      const output = { projectId, projectDir, diagnostics };
-      return {
-        content: [{ type: "text", text: JSON.stringify(output, null, 2) }],
-        structuredContent: output,
-      };
-    }
-  );
-
-  server.registerTool(
-    "lint_gost",
-    {
-      title: "Lint GOST Document",
-      description:
-        "Run structural validation against the project manifest without compiling PDF.",
-      inputSchema: { document: documentSchema },
-      outputSchema: {
-        valid: z.boolean(),
-        diagnostics: z.array(
-          z.object({
-            level: z.string(),
-            field: z.string(),
-            message: z.string(),
-          })
-        ),
-      },
-    },
-    async ({ document }) => {
-      const parsed = documentSchema.parse(document);
-      const diagnostics = lintDocument(parsed);
-      const output = {
-        valid: !diagnostics.some((d) => d.level === "error"),
-        diagnostics,
-      };
-      return {
-        content: [{ type: "text", text: JSON.stringify(output, null, 2) }],
-        structuredContent: output,
-      };
-    }
-  );
-
-  server.registerTool(
-    "render_typst",
-    {
-      title: "Render Typst Source",
-      description:
-        "Generate Typst source from the canonical JSON document model.",
-      inputSchema: {
-        projectId: z.string().regex(/^[a-z0-9\-]+$/),
-        document: documentSchema,
-      },
-      outputSchema: {
-        projectId: z.string(),
-        typPath: z.string(),
-        preview: z.string(),
-      },
-    },
-    async ({ projectId, document }) => {
-      const parsed = documentSchema.parse(document);
-      const typContent = await renderTypst(templatePath, parsed);
-      const { typPath } = await writeProjectFiles(
-        workspaceDir,
-        projectId,
-        typContent,
-        parsed
-      );
-      const output = { projectId, typPath, preview: typContent.slice(0, 1500) };
-      return {
-        content: [{ type: "text", text: JSON.stringify(output, null, 2) }],
-        structuredContent: output,
-      };
-    }
-  );
-
-  server.registerTool(
-    "compile_pdf",
-    {
-      title: "Compile Typst PDF",
-      description:
-        "Compile the generated Typst project to PDF using the typst CLI installed on the host.",
-      inputSchema: {
-        projectId: z.string().regex(/^[a-z0-9\-]+$/),
-      },
-      outputSchema: {
-        success: z.boolean(),
-        command: z.string(),
-        pdfPath: z.string().nullable(),
-        stdout: z.string(),
-        stderr: z.string(),
-      },
-    },
-    async ({ projectId }) => {
-      const projectDir = path.join(workspaceDir, projectId);
-      const result = await compileTypst(projectDir);
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-        structuredContent: result,
-        isError: !result.success,
-      };
-    }
-  );
-
-  server.registerTool(
-    "export_package",
-    {
-      title: "Export Project Package",
-      description:
-        "List generated artifacts for the project so the client can fetch them.",
-      inputSchema: { projectId: z.string().regex(/^[a-z0-9\-]+$/) },
-      outputSchema: {
-        projectId: z.string(),
-        files: z.array(z.object({ name: z.string(), uri: z.string() })),
-      },
-    },
-    async ({ projectId }) => {
-      const projectDir = path.join(workspaceDir, projectId);
-      const entries = await readdir(projectDir, { withFileTypes: true });
-      const files = entries
-        .filter((entry) => entry.isFile())
-        .map((entry) => ({
-          name: entry.name,
-          uri: `file://${path.join(projectDir, entry.name)}`,
-        }));
-      const output = { projectId, files };
-      return {
-        content: [
-          { type: "text", text: JSON.stringify(output, null, 2) },
-          ...files.map((file) => ({
-            type: "resource_link" as const,
-            uri: file.uri,
-            name: file.name,
-            mimeType: file.name.endsWith(".pdf")
-              ? "application/pdf"
-              : "text/plain",
-            description: `Generated artifact ${file.name}`,
-          })),
-        ],
-        structuredContent: output,
-      };
-    }
-  );
-
-  server.registerResource(
-    "project-file",
-    new ResourceTemplate("project://{projectId}/{fileName}", {
-      list: undefined,
-    }),
-    {
-      title: "Project File",
-      description:
-        "Read generated project files from the Typst GOST workspace.",
-    },
-    async (uri, { projectId, fileName }) => {
-      const pid = Array.isArray(projectId) ? projectId[0] : projectId;
-      const fname = Array.isArray(fileName) ? fileName[0] : fileName;
-      const filePath = path.join(workspaceDir, pid, fname);
-      const text = await readFile(filePath, "utf8");
-      return {
-        contents: [{ uri: uri.href, text }],
-      };
-    }
-  );
-
-  server.registerPrompt(
-    "draft_gost_report",
-    {
-      title: "Draft GOST Report",
-      description:
-        "Prompt template instructing an agent to prepare a valid document payload for the MCP tools.",
-      argsSchema: {
-        topic: z.string(),
-        institution: z.string(),
-        studentName: z.string(),
-      },
-    },
-    ({ topic, institution, studentName }) => ({
-      messages: [
-        {
-          role: "user",
-          content: {
-            type: "text",
-            text: `Подготовь JSON-модель учебной работы по теме "${topic}" для вуза "${institution}". Автор: ${studentName}. Сначала заполни titlePage, introduction, sections, conclusion и bibliography, затем вызови new_project, после этого compile_pdf.`,
-          },
-        },
-      ],
-    })
-  );
-
+  registerMcpCapabilities(server, { projectService, typstService });
   return server;
 }
 
-const port = parseInt(process.env.PORT || "3000", 10);
+async function checkTypst(): Promise<{ ok: boolean; version?: string; error?: string }> {
+  return new Promise((resolve) => {
+    const child = spawn("typst", ["--version"]);
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    child.on("error", (error) => {
+      resolve({ ok: false, error: error.message });
+    });
+
+    child.on("close", (code) => {
+      resolve(
+        code === 0
+          ? { ok: true, version: stdout.trim() }
+          : { ok: false, error: stderr.trim() || `typst exited with ${code}` }
+      );
+    });
+  });
+}
 
 Bun.serve({
-  port,
+  port: env.PORT,
   async fetch(req) {
     const url = new URL(req.url);
+
+    if (url.pathname === "/health") {
+      const typst = await checkTypst();
+      return Response.json(
+        {
+          ok: typst.ok,
+          service: "mcp-typst-gost",
+          typst,
+          storage: "s3",
+        },
+        { status: typst.ok ? 200 : 503 }
+      );
+    }
+
+    if (url.pathname === "/api/documents/generate") {
+      try {
+        const apiResponse = await handleDocumentApi(
+          req,
+          createDocumentGenerationService()
+        );
+        if (apiResponse) {
+          return apiResponse;
+        }
+      } catch (error) {
+        return Response.json(
+          { error: error instanceof Error ? error.message : String(error) },
+          { status: 400 }
+        );
+      }
+    }
+
     if (url.pathname !== "/mcp") {
       return new Response("Not Found", { status: 404 });
     }
@@ -292,4 +144,4 @@ Bun.serve({
   },
 });
 
-console.log(`mcp-typst-gost listening on http://localhost:${port}/mcp`);
+console.log(`mcp-typst-gost listening on http://localhost:${env.PORT}/mcp`);

@@ -11,7 +11,10 @@
     "check": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1045.0",
     "@modelcontextprotocol/sdk": "latest",
+    "@openrouter/sdk": "^0.12.35",
+    "eventemitter3": "^5.0.4",
     "zod": "^3.25.76"
   },
   "devDependencies": {

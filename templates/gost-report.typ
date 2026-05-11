@@ -23,8 +23,9 @@ __REFS__
     full: doc-faculty,
     short: doc-department,
   ),
-  about: doc-subtitle,
-  research: doc-title,
+  report-type: if doc-subtitle != "" { doc-subtitle } else { "Отчёт" },
+  subject: doc-title,
+  bare-subject: false,
   manager: (
     name: doc-supervisor,
     position: "Научный руководитель",
@@ -37,7 +38,6 @@ __REFS__
     ),
   ),
   city: doc-city,
-  federal: "",
 )
 
 #gost-abstract(doc-title, doc-subtitle)[
